@@ -19,7 +19,7 @@ window.SITE_CONFIG = {
   // 1) Put Monetag's site-verification meta tag + main script in index.html <head> (see the MONETAG comment there).
   // 2) For in-page banner zones, paste each zone's code below (as a string) or set enabled:false to hide all slots.
   monetag: {
-    enabled: true,          // false = hide all ad slot containers
+    enabled: false,          // false = hide all ad slot containers
     zones: {
       belowHero: "",        // paste Monetag zone code here (home page, under the hero)
       betweenGrid: "",      // paste Monetag zone code here (inside the video grid, after the first row)
