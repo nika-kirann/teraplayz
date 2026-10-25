@@ -1,0 +1,21 @@
+# Render Blueprint — deploys TeraPlayz as a free Static Site (no build step)
+services:
+  - type: web
+    name: teraplayz
+    runtime: static
+    buildCommand: ""
+    staticPublishPath: .
+    pullRequestPreviewsEnabled: false
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=604800
+      - path: /config.js
+        name: Cache-Control
+        value: no-cache

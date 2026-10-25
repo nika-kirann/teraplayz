@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>TeraPlayz — Fresh videos every day</title>
+  <meta name="description" content="TeraPlayz: new videos every day. Watch a free 30-second preview, unlock the full video, or go Premium with Telegram Stars for HD and no ads." />
+  <meta name="theme-color" content="#7c3aed" />
+  <meta property="og:title" content="TeraPlayz" />
+  <meta property="og:description" content="Fresh videos every day. Go Premium for HD & ad-free." />
+  <meta property="og:image" content="assets/mascot-hero.jpg" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    // Apply saved theme before paint (no flash)
+    (function () {
+      try {
+        var t = localStorage.getItem("tp_theme");
+        if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a href="#/" class="brand" aria-label="TeraPlayz home">
+        <img src="assets/favicon.svg" alt="" class="brand-icon" width="36" height="36" />
+        <span class="brand-word">Tera<span>Playz</span></span>
+      </a>
+      <nav class="nav" aria-label="Main">
+        <a href="#/" data-nav="home">Home</a>
+        <a href="#/videos" data-nav="videos">Videos</a>
+        <a href="#/premium" data-nav="premium">Premium</a>
+      </nav>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+          <svg class="i-moon" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <svg class="i-sun" viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="5" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></g></svg>
+        </button>
+        <a href="#/premium" class="btn btn-gold btn-sm hide-xs">👑 Premium</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="app" tabindex="-1"></main>
+
+  <!-- Mobile bottom nav -->
+  <nav class="bottom-nav" aria-label="Mobile">
+    <a href="#/" data-nav="home"><span>🏠</span>Home</a>
+    <a href="#/videos" data-nav="videos"><span>🎬</span>Videos</a>
+    <a href="#/premium" data-nav="premium"><span>👑</span>Premium</a>
+  </nav>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div>
+        <a href="#/" class="brand">
+          <img src="assets/favicon.svg" alt="" class="brand-icon" width="30" height="30" />
+          <span class="brand-word">Tera<span>Playz</span></span>
+        </a>
+        <p class="muted small">New videos every day. Free previews, full videos with short ads, or go Premium for HD & ad-free.</p>
+      </div>
+      <div class="footer-links">
+        <a href="#/videos">All videos</a>
+        <a href="#/premium">Premium</a>
+        <a href="#" id="footerTelegram" target="_blank" rel="noopener">Telegram</a>
+      </div>
+      <p class="muted small footer-copy">© <span id="year"></span> TeraPlayz. Sample films © Blender Foundation (CC BY). Ads shown are placeholders.</p>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
