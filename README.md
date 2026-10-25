@@ -1,14 +1,15 @@
 # TeraPlayz — video site (static front-end)
 
-Purple, mobile-first video site with dark mode, 30-second previews, a "watch 3 ads to unlock" flow,
-and a Premium plan (100 Telegram Stars / month) that links to a private Telegram group.
+Purple, mobile-first video site with dark mode. Every video is free to watch (supported by Monetag ads);
+Premium members (100 Telegram Stars / month) join a private Telegram group for HD and ad-free viewing.
 Plain HTML/CSS/JS, no build step.
 
 ```
 index.html    page shell (header, footer, mobile nav)
 styles.css    all styling (light + dark theme)
-app.js        router, video grid, preview cap, ad flow, premium page
-config.js     ← the ONLY file you normally edit (videos, Telegram link, ad settings)
+app.js        router, video grid, hover previews, watch page, ad slots, premium page
+config.js     ← the ONLY file you normally edit (videos, Telegram link, Monetag slots)
+sw.js         placeholder — replace with the sw.js Monetag gives you
 assets/       mascot art, favicon, video thumbnails
 render.yaml   Render Blueprint (static site)
 ```
@@ -29,15 +30,15 @@ Run locally: `python3 -m http.server 8000` in this folder, then open http://loca
      date: "2026-10-26",                 // newest date gets the "NEW TODAY" badge
      duration: "8:12",
      thumbnail: "assets/thumbs/my-video.jpg",
-     previewUrl: "https://cdn.example.com/my-video-preview.mp4", // can be the full file; playback stops at 30s
+     previewUrl: "https://cdn.example.com/my-video-preview.mp4", // hover teaser on cards (can be the same as fullUrl)
      fullUrl:    "https://cdn.example.com/my-video-720p.mp4",
      hdUrl:      "https://cdn.example.com/my-video-1080p.mp4",
    },
    ```
 4. Commit and push. Render redeploys automatically.
 
-Tip: for real protection, make `previewUrl` a separate 30-second clip
-(`ffmpeg -i full.mp4 -t 30 -c copy preview.mp4`) so the full file isn't exposed in the free preview.
+Tip: a small 30-second clip makes the hover teaser load faster:
+`ffmpeg -i full.mp4 -t 30 -c copy preview.mp4`
 
 ## Change the Telegram Premium link / price
 In `config.js`:
@@ -49,36 +50,30 @@ premiumPriceStars: 100,
 In Telegram you can create a **subscription invite link** for a channel or group priced in Stars
 (Manage → Invite links → Create link → "Charge subscription fee"). Paste that link here.
 
-## Connect real ads
-Ad settings are in `config.js` (`adsToUnlock`, `adSeconds`, `adPlaceholderVideo`).
-The site currently shows clearly-marked **AD PLACEHOLDER** slots with a countdown.
-To use a real network, define `window.TeraPlayzAds.showAd(n, total, containerEl)` in a script loaded
-before `app.js`. It must return a Promise that resolves when ad `n` finishes:
-```html
-<script src="//imasdk.googleapis.com/js/sdkloader/ima3.js"></script>
-<script>
-  window.TeraPlayzAds = {
-    showAd(n, total, el) {
-      return new Promise((resolve) => {
-        // Request a VAST ad with Google IMA (or your network's SDK) into `el`,
-        // and call resolve() on ALL_ADS_COMPLETED / SKIPPED / AD_ERROR.
-      });
-    },
-  };
-</script>
-```
-Video ad networks to look at: Google Ad Manager / IMA (VAST), Adsterra, PropellerAds, ExoClick.
-Check each network's content policy for your videos.
+## Monetag ads
+Free visitors watch every video in standard quality, with Monetag ads on the page. There is no ad gate.
 
-## Important: what needs a backend
-This is a front-end prototype. Everything runs in the browser, so:
-- The "unlocked" state is saved in `localStorage`, per device. A user can clear it or bypass it with dev tools,
-  and the full video URL is visible in the page source.
-- Real ad-gating needs a server that checks ad completion and then gives out a short-lived signed video URL
-  (e.g. Cloudflare/Bunny/S3 signed URLs).
-- Premium is handled by Telegram: the Stars payment and group access happen inside Telegram. HD files are meant
-  to be posted in the premium group. If you want Premium members to watch HD ad-free **on the website**, you need
-  a Telegram bot + backend (Telegram Login, check active Stars subscription via the Bot API, issue a session).
+1. Sign up at https://monetag.com and add your site (e.g. `https://teraplayz.onrender.com`).
+2. **Verification / main script:** open `index.html` and find the `MONETAG` comment in `<head>`.
+   Paste the verification `<meta>` tag and the main/MultiTag `<script>` Monetag gives you there.
+3. **sw.js (push ads):** Monetag's push-notification formats usually need a `sw.js` file in the **site root**.
+   This repo has a placeholder `sw.js` that does nothing. Replace it with the one Monetag gives you (same name, same place).
+4. **Banner / in-page zones:** in `config.js` → `monetag.zones`, paste each zone's code as a string:
+   - `belowHero` (home page, under the hero)
+   - `betweenGrid` (inside the video grid, after the first row)
+   - `belowPlayer` (watch page, under the player)
+
+   There is also a static slot above the footer in `index.html` (`<!-- paste Monetag zone code here -->`).
+   Set `monetag.enabled: false` to hide all slots.
+5. Commit and push, and Render redeploys. Empty slots show a faint "Ad space" box until you paste code.
+
+## Premium & what a backend would add
+- Premium is handled entirely by Telegram: the 100 Stars/month payment and group access happen inside Telegram,
+  and HD files are shared in the Premium group. The site's HD button and Premium CTAs link to that group.
+- The site can't tell who is Premium, so it can't hide ads or serve HD on the website for members.
+  To do that you'd need a Telegram bot + small backend (Telegram Login, check the Stars subscription via the
+  Bot API, then set a session that turns off ad slots and enables HD URLs).
+- Video URLs in `config.js` are public. Use signed URLs from your video host if you need to protect files.
 
 ## Deploy on Render (free Static Site)
 No build step. The publish directory is the repo root.

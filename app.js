@@ -15,8 +15,6 @@
     get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   };
-  const isUnlocked = (id) => store.get("tp_unlocked", []).includes(id);
-  const unlock = (id) => { const u = store.get("tp_unlocked", []); if (!u.includes(id)) u.push(id); store.set("tp_unlocked", u); };
 
   /* ---------- theme ---------- */
   const themeBtn = $("#themeToggle");
@@ -38,6 +36,7 @@
   const tgLink = () => esc(C.telegramPremiumLink);
   const playIcon = '<svg viewBox="0 0 24 24" width="26" height="26"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>';
 
+  if (!(C.monetag && C.monetag.enabled)) { const f = $("#adFooter"); if (f) f.remove(); }
   $("#year").textContent = new Date().getFullYear();
   $("#footerTelegram").href = C.telegramChannelLink || C.telegramPremiumLink;
 
@@ -49,8 +48,7 @@
         <video muted playsinline preload="none"></video>
         <span class="play">${playIcon}</span>
         ${v.date === newestDate ? '<span class="badge new">NEW TODAY</span>' : ""}
-        ${isUnlocked(v.id) ? '<span class="badge unl">✓ Unlocked</span>' : ""}
-        <span class="badge prev">▶ ${PREVIEW}s preview</span>
+        
         <span class="badge dur">${esc(v.duration)}</span>
         <span class="preview-bar"></span>
       </a>
@@ -78,11 +76,15 @@
     const q = state.q.trim().toLowerCase();
     const list = videos.filter((v) => (state.cat === "All" || v.category === state.cat) &&
       (!q || (v.title + " " + v.description + " " + v.category).toLowerCase().includes(q)));
-    g.innerHTML = list.length ? list.map(cardHTML).join("") :
+    const cards = list.map(cardHTML);
+    const mid = C.monetag && C.monetag.enabled && list.length > 4 ? `<div class="grid-ad">${adSlot("betweenGrid").replace("ad-slot container", "ad-slot")}</div>` : "";
+    if (mid) cards.splice(4, 0, mid);
+    g.innerHTML = list.length ? cards.join("") :
       `<div class="empty fade-in"><img src="assets/mascot-empty.jpg" alt="Mascot searching with a magnifying glass" />
         <h3>Nothing here… yet!</h3><p class="muted">No videos match “${esc(state.q || state.cat)}”. New videos drop every day — try another search.</p>
         <button class="btn btn-ghost" id="resetFilters">Show all videos</button></div>`;
     const r = $("#resetFilters"); if (r) r.onclick = () => { state.q = ""; state.cat = "All"; $("#search").value = ""; syncChips(); renderGrid(); };
+    runAdScripts(g);
     bindPreviews(g);
   }
   function syncChips() { document.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c.dataset.cat === state.cat)); }
@@ -122,7 +124,7 @@
           <div>
             <span class="pill"><span class="dot"></span> New video uploaded today</span>
             <h1>Welcome to <span class="grad-text">TeraPlayz</span> — fresh videos, every single day.</h1>
-            <p class="lead">Watch a free ${PREVIEW}-second preview of anything. Love it? Watch ${C.adsToUnlock} quick ads to unlock the full video — or go Premium for HD and zero ads.</p>
+            <p class="lead">New videos drop every day — watch them free right here. Want them in HD with zero ads? Go Premium on Telegram for just ${C.premiumPriceStars} ⭐ a ${C.premiumPeriod}.</p>
             <div class="hero-ctas">
               <a href="#/videos" class="btn btn-primary btn-lg">${playIcon.replace('26" height="26','20" height="20')} Start watching</a>
               <a href="#/premium" class="btn btn-gold btn-lg">👑 Go Premium · ${C.premiumPriceStars} ⭐</a>
@@ -140,8 +142,10 @@
           </div>
         </div>
       </section>
-      ${gridSection("Latest videos", "Hover a card to see the preview · tap to watch")}
+      ${adSlot("belowHero")}
+      ${gridSection("Latest videos", "Hover a card for a quick preview · tap to watch free")}
       <section class="container">${teaserHTML()}</section>`;
+    runAdScripts(app);
     bindFilters();
   }
 
@@ -158,6 +162,25 @@
     </div>`;
   }
 
+  /* ---------- ad slots (Monetag) ---------- */
+  // Renders an empty ad container. Paste your Monetag zone code into config.js (monetag.zones)
+  // or directly inside the matching <div class="ad-slot"> in index.html templates.
+  function adSlot(name) {
+    const M = C.monetag || {};
+    if (!M.enabled) return "";
+    const code = (M.zones || {})[name] || "";
+    return `<div class="ad-slot container" data-ad-slot="${esc(name)}"><span class="ad-slot-label">Advertisement</span>
+      <div class="ad-slot-inner"><!-- paste Monetag zone code here (slot: ${esc(name)}) -->${code}</div></div>`;
+  }
+  function runAdScripts(root) {
+    // Scripts inserted via innerHTML do not run; re-create them so Monetag zone snippets execute.
+    root.querySelectorAll(".ad-slot script").forEach((old) => {
+      const s = document.createElement("script");
+      [...old.attributes].forEach((a) => s.setAttribute(a.name, a.value));
+      s.text = old.text; old.replaceWith(s);
+    });
+  }
+
   /* ---------- watch page ---------- */
   function viewWatch(id) {
     const v = videos.find((x) => x.id === id);
@@ -167,13 +190,17 @@
       <section class="container watch fade-in">
         <div>
           <div class="player" id="player">
-            <span class="player-tag" id="ptag"></span>
-            <video id="vid" controls playsinline preload="metadata" poster="${esc(v.thumbnail)}"></video>
+            <video id="vid" controls playsinline preload="metadata" poster="${esc(v.thumbnail)}" src="${esc(v.fullUrl)}"></video>
           </div>
+          ${adSlot("belowPlayer").replace("ad-slot container", "ad-slot")}
           <div class="watch-info">
             <h1>${esc(v.title)}</h1>
             <div class="meta"><span class="tag">${esc(v.category)}</span><span>${fmtDate(v.date)}</span><span>· ${esc(v.duration)}</span></div>
-            <div class="watch-actions" id="actions"></div>
+            <div class="watch-actions" id="actions">
+              <div class="quality" role="group" aria-label="Quality"><button class="on" data-q="sd">SD</button><button data-q="hd">HD 👑</button></div>
+              <a class="btn btn-gold btn-sm" href="${tgLink()}" target="_blank" rel="noopener">👑 HD &amp; ad-free with Premium</a>
+              <button class="btn btn-ghost btn-sm" id="shareBtn">🔗 Share</button>
+            </div>
             <div class="info-box"><p style="margin:0">${esc(v.description)}</p></div>
           </div>
         </div>
@@ -181,117 +208,27 @@
           <div class="upnext"><h3>Up next</h3>
             ${others.map((o) => `<a class="mini-card" href="#/watch/${encodeURIComponent(o.id)}"><img src="${esc(o.thumbnail)}" alt="" loading="lazy"/><div><b>${esc(o.title)}</b><div class="meta"><span>${esc(o.category)}</span><span>${esc(o.duration)}</span></div></div></a>`).join("")}
           </div>
-          <div class="side-premium"><img src="assets/mascot-premium.jpg" alt="" /><b>Skip the ads forever</b><p class="muted small">HD + ad-free for ${C.premiumPriceStars} ⭐/${C.premiumPeriod}</p><a href="${tgLink()}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">Join Premium on Telegram</a></div>
+          <div class="side-premium"><img src="assets/mascot-premium.jpg" alt="" /><b>Go ad-free in HD</b><p class="muted small">Premium: ${C.premiumPriceStars} ⭐ / ${C.premiumPeriod} on Telegram</p><a href="${tgLink()}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">Join Premium on Telegram</a></div>
         </aside>
       </section>`;
+    runAdScripts(app);
 
-    const player = $("#player"), vid = $("#vid"), tag = $("#ptag"), actions = $("#actions");
-    let quality = "sd";
-
-    function setOverlay(html) { removeOverlay(); const o = document.createElement("div"); o.className = "overlay"; o.innerHTML = `<div>${html}</div>`; player.appendChild(o); return o; }
+    const player = $("#player"), vid = $("#vid");
     function removeOverlay() { player.querySelectorAll(".overlay").forEach((o) => o.remove()); }
-
-    function lockedOverlay() {
-      if (player.querySelector(".overlay.lock, .ad")) return; // already showing
-      const o = setOverlay(`<img class="mini" src="assets/mascot-hero.jpg" alt="" />
-        <h3>Your ${PREVIEW}-second preview is over 💜</h3>
-        <p>Watch ${C.adsToUnlock} short ads to unlock the full video — or go Premium for ad-free HD.</p>
-        <div class="btns"><button class="btn btn-primary" data-act="ads">▶ Unlock full video</button>
-        <a class="btn btn-gold" href="${tgLink()}" target="_blank" rel="noopener">👑 Premium · ${C.premiumPriceStars} ⭐</a>
-        <button class="btn btn-ghost" data-act="replay" style="color:var(--text)">↺ Replay preview</button></div>`);
-      o.classList.add("lock");
-      $('[data-act="ads"]', o).onclick = startAds;
-      $('[data-act="replay"]', o).onclick = () => { removeOverlay(); vid.currentTime = 0; vid.play().catch(() => {}); };
-    }
-
-    // ---- preview mode: hard cap at PREVIEW seconds ----
-    function capPreview() {
-      if (isUnlocked(id)) return;
-      if (vid.currentTime >= PREVIEW) {
-        vid.pause(); vid.currentTime = PREVIEW; player.dataset.previewEnded = "1"; lockedOverlay();
-      }
-    }
-    vid.addEventListener("timeupdate", capPreview);
-    vid.addEventListener("seeking", () => { if (!isUnlocked(id) && vid.currentTime > PREVIEW) { vid.currentTime = PREVIEW; capPreview(); } });
-    vid.addEventListener("play", () => { if (!isUnlocked(id) && vid.currentTime >= PREVIEW - 0.05) { vid.pause(); lockedOverlay(); } });
-
-    function load(autoplay) {
-      const unlocked = isUnlocked(id);
-      vid.src = unlocked ? (quality === "hd" ? v.hdUrl : v.fullUrl) : v.previewUrl;
-      tag.textContent = unlocked ? (quality === "hd" ? "Full video · HD" : "✓ Full video unlocked") : `Free preview · ${PREVIEW}s`;
-      tag.classList.toggle("full", unlocked);
-      player.dataset.mode = unlocked ? "full" : "preview";
-      renderActions();
-      if (autoplay) vid.play().catch(() => {
-        const o = setOverlay(`<h3>🎉 Full video unlocked!</h3><p>Enjoy the whole thing.</p><div class="btns"><button class="btn btn-primary" data-act="go">▶ Play full video</button></div>`);
-        $('[data-act="go"]', o).onclick = () => { removeOverlay(); vid.play(); };
-      });
-    }
-
-    function renderActions() {
-      const unlocked = isUnlocked(id);
-      actions.innerHTML = `
-        ${unlocked ? '<span class="btn btn-ghost btn-sm" style="cursor:default">✓ Unlocked on this device</span>'
-          : `<button class="btn btn-primary" id="unlockBtn">▶ Play full video <small style="opacity:.85">(${C.adsToUnlock} short ads)</small></button>`}
-        <div class="quality" role="group" aria-label="Quality"><button class="${quality === "sd" ? "on" : ""}" data-q="sd">SD</button><button class="${quality === "hd" ? "on" : ""}" data-q="hd">HD 👑</button></div>
-        <a class="btn btn-gold btn-sm" href="${tgLink()}" target="_blank" rel="noopener">Ad-free with Premium</a>
-        <button class="btn btn-ghost btn-sm" id="shareBtn">🔗 Share</button>`;
-      const ub = $("#unlockBtn"); if (ub) ub.onclick = startAds;
-      actions.querySelectorAll("[data-q]").forEach((b) => b.onclick = () => {
-        if (b.dataset.q === "hd") {
-          // HD is a Premium perk. Premium members get HD files inside the Telegram group.
-          vid.pause();
-          const o = setOverlay(`<img class="mini" src="assets/mascot-premium.jpg" alt="" /><h3>HD is a Premium perk 👑</h3>
-            <p>Join TeraPlayz Premium on Telegram for ${C.premiumPriceStars} ⭐ / ${C.premiumPeriod}: every video in high quality, ad-free.</p>
-            <div class="btns"><a class="btn btn-gold" href="${tgLink()}" target="_blank" rel="noopener">Join Premium</a><button class="btn btn-ghost" data-act="close" style="color:var(--text)">Maybe later</button></div>`);
-          $('[data-act="close"]', o).onclick = removeOverlay;
-        }
-      });
-      $("#shareBtn").onclick = async () => {
-        const url = location.href;
-        try { if (navigator.share) await navigator.share({ title: v.title, url }); else { await navigator.clipboard.writeText(url); toast("Link copied!"); } } catch {}
-      };
-    }
-
-    // ---- 3-ad unlock flow ----
-    function startAds() {
+    $('[data-q="hd"]').onclick = () => {
+      // HD is a Premium perk: HD files are shared in the Premium Telegram group.
       vid.pause(); removeOverlay();
-      if (player.querySelector(".ad")) return;
-      const ub = $("#unlockBtn"); if (ub) { ub.disabled = true; ub.style.opacity = .6; ub.innerHTML = "⏳ Ads playing…"; }
-      const N = C.adsToUnlock;
-      const ad = document.createElement("div"); ad.className = "ad"; ad.id = "adSlot"; player.appendChild(ad);
-      let i = 0, timer, cancelled = false;
-      cleanup.push(() => { cancelled = true; clearInterval(timer); });
-      const next = () => {
-        if (cancelled) return;
-        if (i >= N) { ad.remove(); unlock(id); toast("🎉 Full video unlocked!"); load(true); return; }
-        i++; showAd(i, N, ad).then(next);
-      };
-      // Placeholder ad slot. Replace showAd() with your ad network (e.g. Google IMA / VAST) — resolve when the ad completes.
-      function showAd(n, total, el) {
-        return (window.TeraPlayzAds && window.TeraPlayzAds.showAd) ? window.TeraPlayzAds.showAd(n, total, el) : new Promise((resolve) => {
-          const secs = C.adSeconds; let left = secs; const R = 24, CIRC = 2 * Math.PI * R;
-          el.innerHTML = `<div class="ad-top"><span><span class="ad-label">AD</span> &nbsp;Ad ${n} of ${total}</span>
-              <span class="ad-dots">${Array.from({ length: total }, (_, k) => `<i class="${k < n - 1 ? "done" : k === n - 1 ? "cur" : ""}"></i>`).join("")}</span></div>
-            <div class="ad-body">${C.adPlaceholderVideo ? `<video src="${esc(C.adPlaceholderVideo)}" autoplay muted playsinline loop></video>` : ""}
-              <div class="ad-placeholder"><div class="ad-count"><svg viewBox="0 0 56 56" width="56" height="56"><circle cx="28" cy="28" r="${R}" stroke="rgba(255,255,255,.2)" stroke-width="4" fill="none"/><circle id="ring" cx="28" cy="28" r="${R}" stroke="#facc15" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="${CIRC}" stroke-dashoffset="0"/></svg><span id="adLeft">${left}</span></div>
-                <b>AD PLACEHOLDER · Slot ${n}/${total}</b><small>Your ad network video plays here (VAST / Google IMA). Video unlocks after ${total} ads.</small></div></div>
-            <div class="ad-progress"><div id="adBar"></div></div>`;
-          timer = setInterval(() => {
-            left -= 0.25;
-            const pct = (secs - left) / secs;
-            $("#adBar", el).style.width = pct * 100 + "%";
-            $("#ring", el).setAttribute("stroke-dashoffset", String(CIRC * pct));
-            $("#adLeft", el).textContent = Math.max(0, Math.ceil(left));
-            if (left <= 0) { clearInterval(timer); resolve(); }
-          }, 250);
-        });
-      }
-      next();
-    }
-
-    load(false);
-    if (isUnlocked(id)) tag.textContent = "✓ Full video unlocked";
+      const o = document.createElement("div"); o.className = "overlay";
+      o.innerHTML = `<div><img class="mini" src="assets/mascot-premium.jpg" alt="" /><h3>HD is a Premium perk 👑</h3>
+        <p>Join TeraPlayz Premium on Telegram for ${C.premiumPriceStars} ⭐ / ${C.premiumPeriod}: every video in high quality, ad-free.</p>
+        <div class="btns"><a class="btn btn-gold" href="${tgLink()}" target="_blank" rel="noopener">Join Premium</a><button class="btn btn-ghost" data-act="close" style="color:var(--text)">Keep watching in SD</button></div></div>`;
+      player.appendChild(o);
+      $('[data-act="close"]', o).onclick = () => { removeOverlay(); vid.play().catch(() => {}); };
+    };
+    $("#shareBtn").onclick = async () => {
+      const url = location.href;
+      try { if (navigator.share) await navigator.share({ title: v.title, url }); else { await navigator.clipboard.writeText(url); toast("Link copied!"); } } catch {}
+    };
     cleanup.push(() => { vid.pause(); vid.removeAttribute("src"); vid.load(); });
   }
 
@@ -303,7 +240,7 @@
         <div>
           <span class="pill">👑 TeraPlayz Premium</span>
           <h1>Every video. <span class="grad-text">HD. Zero ads.</span></h1>
-          <p class="muted" style="font-size:1.1rem;max-width:34rem">Join the private TeraPlayz Premium group on Telegram for just <b class="star">${S} ⭐ Telegram Stars</b> a ${C.premiumPeriod}. Get every daily upload in high quality, with no ads and no waiting.</p>
+          <p class="muted" style="font-size:1.1rem;max-width:34rem">Join the private TeraPlayz Premium group on Telegram for just <b class="star">${S} ⭐ Telegram Stars</b> a ${C.premiumPeriod}. Get every daily upload in high quality, with no ads at all.</p>
           <div class="hero-ctas"><a href="${tgLink()}" target="_blank" rel="noopener" class="btn btn-gold btn-lg" id="joinPremium">✈️ Join on Telegram</a><a href="#/videos" class="btn btn-ghost btn-lg">Browse free previews</a></div>
         </div>
         <div class="price-card">
@@ -312,7 +249,7 @@
             <div><div class="muted small" style="font-weight:700">PREMIUM MONTHLY</div><div class="price"><span class="star">⭐</span>${S} <small>Stars / ${C.premiumPeriod}</small></div></div></div>
           <ul class="benefits">
             <li><i>✓</i><span><b>All videos in HD</b> — high-quality files for every upload</span></li>
-            <li><i>✓</i><span><b>100% ad-free</b> — no previews, no ad breaks, ever</span></li>
+            <li><i>✓</i><span><b>100% ad-free</b> — no banners, no pop-ups, no ad breaks</span></li>
             <li><i>✓</i><span><b>Daily drops first</b> — new videos posted in the group</span></li>
             <li><i>✓</i><span><b>Private Telegram group</b> — chat with the community</span></li>
             <li><i>✓</i><span><b>Cancel anytime</b> — managed inside Telegram</span></li>
@@ -333,10 +270,10 @@
         <div class="section-head"><h2>Free vs Premium</h2></div>
         <div style="overflow-x:auto"><table class="compare">
           <tr><th></th><th>Free</th><th>Premium 👑</th></tr>
-          <tr><td>${PREVIEW}-second previews</td><td>✓</td><td>✓</td></tr>
-          <tr><td>Full videos</td><td>After ${C.adsToUnlock} ads</td><td>✓ Instantly</td></tr>
-          <tr><td>High quality (HD)</td><td>—</td><td>✓</td></tr>
-          <tr><td>Ads</td><td>Yes</td><td>None</td></tr>
+          <tr><td>Watch every video</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Quality</td><td>Standard (SD)</td><td>✓ High quality (HD)</td></tr>
+          <tr><td>Ads</td><td>Yes</td><td>None — 100% ad-free</td></tr>
+          <tr><td>Price</td><td>Free</td><td>${S} ⭐ / ${C.premiumPeriod}</td></tr>
           <tr><td>Private Telegram group</td><td>—</td><td>✓</td></tr>
         </table></div>
       </section>
@@ -344,6 +281,7 @@
         <div class="section-head"><h2>FAQ</h2></div>
         <details><summary>What are Telegram Stars?</summary><p class="muted">Stars are Telegram's in-app currency. You can buy them inside Telegram and use them to pay for subscriptions like TeraPlayz Premium.</p></details>
         <details><summary>How often are new videos added?</summary><p class="muted">Every day! Premium members get them in HD in the Telegram group.</p></details>
+        <details><summary>Is TeraPlayz free?</summary><p class="muted">Yes! Every video is free to watch on the website, supported by ads. Premium removes the ads and gives you HD.</p></details>
         <details><summary>Can I cancel?</summary><p class="muted">Yes — manage or cancel your subscription anytime in Telegram.</p></details>
       </section>`;
   }

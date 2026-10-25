@@ -14,17 +14,25 @@ window.SITE_CONFIG = {
   premiumPriceStars: 100,
   premiumPeriod: "month",
 
-  // ---- Ads ----
-  previewSeconds: 30,        // free preview length
-  adsToUnlock: 3,            // ads a visitor must watch to unlock a full video
-  adSeconds: 5,              // length of each placeholder ad (real ads control their own length)
-  // Optional: a sample video to play inside each ad placeholder. Leave "" for an animated placeholder.
-  adPlaceholderVideo: "",
+  // Hover preview length on video cards (teaser only — full videos are always free to watch)
+  previewSeconds: 30,
+
+  // ---- Monetag ads ----
+  // 1) Put Monetag's site-verification meta tag + main script in index.html <head> (see the MONETAG comment there).
+  // 2) For in-page banner zones, paste each zone's code below (as a string) or set enabled:false to hide all slots.
+  monetag: {
+    enabled: true,          // false = hide all ad slot containers
+    zones: {
+      belowHero: "",        // paste Monetag zone code here (home page, under the hero)
+      betweenGrid: "",      // paste Monetag zone code here (inside the video grid, after the first row)
+      belowPlayer: "",      // paste Monetag zone code here (watch page, under the video player)
+    },
+  },
 
   // ---- Videos ----
   // Add the newest video at the TOP of this list. Fields:
   // id (unique, url-safe), title, description, category, date (YYYY-MM-DD), duration (label),
-  // thumbnail, previewUrl (can be the full file — playback is cut at previewSeconds),
+  // thumbnail, previewUrl (used for the short hover teaser on cards; can be the same file as fullUrl),
   // fullUrl (normal quality), hdUrl (premium / high quality)
   videos: [
     {

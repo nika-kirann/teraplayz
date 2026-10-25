@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>TeraPlayz — Fresh videos every day</title>
-  <meta name="description" content="TeraPlayz: new videos every day. Watch a free 30-second preview, unlock the full video, or go Premium with Telegram Stars for HD and no ads." />
+  <meta name="description" content="TeraPlayz: new videos every day. Watch every video free, or go Premium with 100 Telegram Stars a month for HD and no ads." />
   <meta name="theme-color" content="#7c3aed" />
   <meta property="og:title" content="TeraPlayz" />
   <meta property="og:description" content="Fresh videos every day. Go Premium for HD & ad-free." />
@@ -24,6 +24,16 @@
     })();
   </script>
   <link rel="stylesheet" href="styles.css" />
+
+  <!-- ================= MONETAG =================
+       1. Paste the Monetag site-verification meta tag here, e.g.
+          <meta name="monetag" content="YOUR_VERIFICATION_CODE">
+       2. Paste the Monetag main / MultiTag script here (the <script> Monetag gives you).
+       3. If Monetag gives you a sw.js file (for push notification ads), replace /sw.js in the site root with it.
+       In-page banner zones go in config.js → monetag.zones (paste Monetag zone code there).
+       ============================================ -->
+  <!-- paste Monetag meta tag here -->
+  <!-- paste Monetag main script here -->
 </head>
 <body>
   <header class="topbar">
@@ -49,6 +59,13 @@
 
   <main id="app" tabindex="-1"></main>
 
+  <!-- Ad slot (all pages, above footer). Other slots (below hero, inside the video grid, below the player)
+       are rendered by app.js from config.js → monetag.zones. -->
+  <div class="ad-slot container" id="adFooter">
+    <span class="ad-slot-label">Advertisement</span>
+    <div class="ad-slot-inner"><!-- paste Monetag zone code here (slot: aboveFooter) --></div>
+  </div>
+
   <!-- Mobile bottom nav -->
   <nav class="bottom-nav" aria-label="Mobile">
     <a href="#/" data-nav="home"><span>🏠</span>Home</a>
@@ -63,14 +80,14 @@
           <img src="assets/favicon.svg" alt="" class="brand-icon" width="30" height="30" />
           <span class="brand-word">Tera<span>Playz</span></span>
         </a>
-        <p class="muted small">New videos every day. Free previews, full videos with short ads, or go Premium for HD & ad-free.</p>
+        <p class="muted small">New videos every day. Watch free with ads, or go Premium on Telegram for HD &amp; ad-free.</p>
       </div>
       <div class="footer-links">
         <a href="#/videos">All videos</a>
         <a href="#/premium">Premium</a>
         <a href="#" id="footerTelegram" target="_blank" rel="noopener">Telegram</a>
       </div>
-      <p class="muted small footer-copy">© <span id="year"></span> TeraPlayz. Sample films © Blender Foundation (CC BY). Ads shown are placeholders.</p>
+      <p class="muted small footer-copy">© <span id="year"></span> TeraPlayz. Sample films © Blender Foundation (CC BY). Ads by Monetag.</p>
     </div>
   </footer>
 

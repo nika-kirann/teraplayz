@@ -19,3 +19,6 @@ services:
       - path: /config.js
         name: Cache-Control
         value: no-cache
+      - path: /sw.js
+        name: Cache-Control
+        value: no-cache
