@@ -79,6 +79,7 @@ run_local.sh         run locally in mock mode (no Telegram needed)
 3. Render asks for the secret values. Fill in:
    - `TG_API_ID`, `TG_API_HASH`, `TG_BOT_TOKEN`, `TG_CHANNEL_ID` (from step 1)
    - `ADMIN_PASSWORD`: choose a long password for `/admin`
+   - `PREMIUM_TELEGRAM_LINK`: your premium group invite link, e.g. `https://t.me/+abc123`
    - `SESSION_SECRET`: generated automatically, nothing to do
 4. Click **Apply**. The build runs `pip install -r requirements.txt` and starts
    `uvicorn server.main:app --host 0.0.0.0 --port $PORT`.
@@ -132,6 +133,8 @@ In Telegram you can create a **subscription invite link** priced in Stars for th
 | `TG_BOT_TOKEN` | yes | bot token from @BotFather (bot must be channel admin) |
 | `TG_CHANNEL_ID` | yes | private channel id, `-100…` |
 | `ADMIN_PASSWORD` | yes | password for `/admin` |
+| `PREMIUM_TELEGRAM_LINK` | no | invite link to your premium Telegram group (overrides config.js) |
+| `PUBLIC_TELEGRAM_LINK` | no | public Telegram channel link shown in the footer |
 | `SESSION_SECRET` | yes | random string that signs the admin cookie (Render generates it) |
 | `STORAGE` | no | `telegram` (default) or `local` for development |
 | `LOCAL_DATA_DIR` | no | folder for `STORAGE=local` (default `./data`) |

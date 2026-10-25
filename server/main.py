@@ -622,4 +622,18 @@ async def healthz():
     return {"ok": True}
 
 
+@app.get("/config.js")
+async def config_js():
+    """Serve public/config.js, swapping in Telegram links from env vars when set."""
+    from fastapi.responses import Response
+    js = (PUBLIC / "config.js").read_text(encoding="utf-8")
+    premium = os.environ.get("PREMIUM_TELEGRAM_LINK", "").strip()
+    channel = os.environ.get("PUBLIC_TELEGRAM_LINK", "").strip()
+    if premium:
+        js = js.replace("https://t.me/YOUR_PREMIUM_GROUP", premium.replace('"', ""))
+    if channel:
+        js = js.replace("https://t.me/YOUR_PUBLIC_CHANNEL", channel.replace('"', ""))
+    return Response(js, media_type="application/javascript", headers={"Cache-Control": "no-cache"})
+
+
 app.mount("/", StaticFiles(directory=str(PUBLIC), html=True), name="public")
