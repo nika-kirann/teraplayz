@@ -104,6 +104,8 @@ class DB:
             self.data = json.loads(raw)
             self.data.setdefault("videos", [])
             self.data.setdefault("stats", {}).setdefault("days", {})
+            for v in self.data["videos"]:
+                v.pop("category", None)  # categories were removed; drop the field from old records
         d = self.data["stats"]["days"].get(today())
         if d:
             self._visitors_today = set(d.get("visitors", []))
@@ -245,7 +247,7 @@ def is_https(request: Request) -> bool:
 def public_video(v: dict) -> dict:
     return {
         "id": v["id"], "title": v["title"], "description": v.get("description", ""),
-        "category": v.get("category", "Other"), "date": v.get("date"), "duration": v.get("duration", ""),
+        "date": v.get("date"), "duration": v.get("duration", ""),
         "featured": bool(v.get("featured")), "views": v.get("views", 0),
         "thumbnail": f"/thumb/{v['id']}" if v.get("thumb") else None,
         "previewUrl": f"/stream/{v['id']}", "fullUrl": f"/stream/{v['id']}",
@@ -456,7 +458,7 @@ async def admin_stats(request: Request, days: int = 7):
             "todayPageviews": series[-1]["pageviews"], "todayVisitors": series[-1]["visitors"],
         },
         "series": series,
-        "top": [{"id": v["id"], "title": v["title"], "views": v.get("views", 0), "category": v.get("category")}
+        "top": [{"id": v["id"], "title": v["title"], "views": v.get("views", 0)}
                 for v in top],
         "allViews": [{"id": v["id"], "title": v["title"], "views": v.get("views", 0)} for v in by_views],
         "status": {
@@ -487,8 +489,6 @@ async def admin_edit(vid: str, request: Request):
         if not t:
             raise HTTPException(400, "Title is required")
         v["title"] = t
-    if "category" in body:
-        v["category"] = clean_text(body["category"], 40) or "Other"
     if "description" in body:
         v["description"] = clean_text(body["description"], 2000)
     if "featured" in body:
@@ -525,7 +525,6 @@ async def admin_upload(
     video: UploadFile = File(...),
     thumbnail: Optional[UploadFile] = File(None),
     title: str = Form(...),
-    category: str = Form("Other"),
     description: str = Form(""),
     duration: str = Form(""),
     featured: str = Form("false"),
@@ -562,7 +561,7 @@ async def admin_upload(
             tpath.write_bytes(data)
 
     meta = {
-        "id": job_id, "title": title, "category": clean_text(category, 40) or "Other",
+        "id": job_id, "title": title,
         "description": clean_text(description, 2000),
         "duration": duration if DURATION_RE.match(duration or "") else "",
         "featured": featured.lower() in ("1", "true", "on", "yes"),

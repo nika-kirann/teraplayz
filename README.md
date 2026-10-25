@@ -37,7 +37,7 @@ run_local.sh         run locally in mock mode (no Telegram needed)
 | **Analytics** | Daily page views, daily unique visitors and per-video views are stored in the same JSON document. |
 
 ### The Telegram "database" (pinned JSON)
-- All metadata (titles, categories, descriptions, featured flag, dates, Telegram message ids of each file
+- All metadata (titles, descriptions, featured flag, dates, Telegram message ids of each file
   and thumbnail) and analytics live in one JSON file posted in the channel with the caption `#teraplayz_db`,
   and **pinned**.
 - **On startup** the server reads the channel's pinned message, downloads the JSON and keeps it **in memory**.
@@ -96,7 +96,7 @@ Each `git push` to `main` redeploys automatically. Your videos and database are 
   After 5 wrong passwords from the same IP, login is locked for 15 minutes.
 - **Upload**
   1. Choose or drag a video (MP4 H.264 or WebM recommended, up to 2 GB).
-  2. Fill in the title, category, date and description, and optionally tick ⭐ *featured*.
+  2. Fill in the title, date and description, and optionally tick ⭐ *featured*.
   3. A thumbnail is auto-generated. You can scrub the preview and press *Use current frame*, or upload an image instead.
   4. Press **Upload**. The bar shows step 1 (your browser to the server) and step 2 (the server to Telegram).
      Keep the tab open until it says Done.

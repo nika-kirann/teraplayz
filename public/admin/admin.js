@@ -141,25 +141,15 @@
     });
   }
 
-  async function categoriesList() {
-    try { state.videos = (await api("/admin/api/videos")).videos; } catch {}
-    const base = ["Animation", "Sci-Fi", "Comedy", "Music", "Gaming", "Other"];
-    return [...new Set([...state.videos.map((v) => v.category), ...base])];
-  }
-
   async function viewUpload() {
     pick = { video: null, thumbBlob: null, thumbFromUser: false, duration: "" };
-    const cats = await categoriesList();
     app.innerHTML = `<div class="fade-in"><h1>Upload a video</h1>
       <form id="upForm" class="form-grid two">
         <section class="panel form-grid">
           <label class="drop" id="drop"><span class="big">🎬</span><b id="dropTitle">Choose a video or drop it here</b><span class="hint" id="dropHint">MP4 / WebM · up to 2 GB · stored in your private Telegram channel</span>
             <input type="file" id="fVideo" accept="video/*" /></label>
           <div class="field"><label for="fTitle">Title</label><input type="text" id="fTitle" maxlength="200" required placeholder="e.g. Episode 12 — The Big Day" /></div>
-          <div class="row2">
-            <div class="field"><label for="fCat">Category</label><input type="text" id="fCat" list="cats" maxlength="40" placeholder="Animation" /><datalist id="cats">${cats.map((c) => `<option value="${esc(c)}">`).join("")}</datalist></div>
-            <div class="field"><label for="fDate">Date</label><input type="date" id="fDate" value="${todayStr()}" /></div>
-          </div>
+          <div class="field"><label for="fDate">Date</label><input type="date" id="fDate" value="${todayStr()}" /></div>
           <div class="field"><label for="fDesc">Description</label><textarea id="fDesc" maxlength="2000" placeholder="What's this video about?"></textarea></div>
           <label class="switch"><input type="checkbox" id="fFeat" /> ⭐ Mark as featured (shown first on the site)</label>
         </section>
@@ -216,7 +206,6 @@
       fd.append("video", pick.video, pick.video.name);
       if (pick.thumbBlob) fd.append("thumbnail", pick.thumbBlob, "thumb.jpg");
       fd.append("title", $("#fTitle").value);
-      fd.append("category", $("#fCat").value || "Other");
       fd.append("description", $("#fDesc").value);
       fd.append("duration", pick.duration);
       fd.append("date", $("#fDate").value);
@@ -273,11 +262,11 @@
 
   function renderList() {
     const q = state.q.trim().toLowerCase();
-    const list = state.videos.filter((v) => !q || (v.title + " " + v.category + " " + v.description).toLowerCase().includes(q));
+    const list = state.videos.filter((v) => !q || (v.title + " " + (v.description || "")).toLowerCase().includes(q));
     $("#vlist").innerHTML = list.length ? list.map((v) => `<article class="vrow" data-id="${esc(v.id)}">
         <img src="${esc(v.thumbnail || "/assets/thumb-placeholder.svg")}" alt="" loading="lazy" />
         <div style="min-width:0"><h3>${esc(v.title)} ${v.featured ? '<span class="feat-pill">⭐ Featured</span>' : ""}</h3>
-          <div class="meta"><span class="tag">${esc(v.category)}</span><span>${esc(v.date)}</span><span>${esc(v.duration || "—")}</span><span>👁 ${fmtNum(v.views)}</span><span>${fmtBytes(v.size)}</span></div></div>
+          <div class="meta"><span>${esc(v.date)}</span><span>${esc(v.duration || "—")}</span><span>👁 ${fmtNum(v.views)}</span><span>${fmtBytes(v.size)}</span></div></div>
         <div class="acts">
           <button class="btn btn-ghost btn-sm star-btn ${v.featured ? "on" : ""}" data-act="feat" title="Toggle featured">⭐ ${v.featured ? "Featured" : "Feature"}</button>
           <button class="btn btn-ghost btn-sm" data-act="edit">✏️ Edit</button>
@@ -309,15 +298,14 @@
   function editModal(v) {
     const m = modal(`<h2>Edit video</h2><form class="form-grid" id="editForm">
       <div class="field"><label for="eTitle">Title</label><input type="text" id="eTitle" maxlength="200" required value="${esc(v.title)}" /></div>
-      <div class="row2"><div class="field"><label for="eCat">Category</label><input type="text" id="eCat" maxlength="40" value="${esc(v.category)}" /></div>
-        <div class="field"><label for="eDate">Date</label><input type="date" id="eDate" value="${esc(v.date)}" /></div></div>
+      <div class="field"><label for="eDate">Date</label><input type="date" id="eDate" value="${esc(v.date)}" /></div>
       <div class="field"><label for="eDesc">Description</label><textarea id="eDesc" maxlength="2000">${esc(v.description)}</textarea></div>
       <label class="switch"><input type="checkbox" id="eFeat" ${v.featured ? "checked" : ""}/> ⭐ Featured</label>
       <div class="btns"><button type="button" class="btn btn-ghost" data-act="cancel">Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div></form>`);
     $('[data-act="cancel"]', m).onclick = () => m.remove();
     $("#editForm", m).onsubmit = async (e) => {
       e.preventDefault();
-      await save(v, { title: $("#eTitle", m).value, category: $("#eCat", m).value, date: $("#eDate", m).value, description: $("#eDesc", m).value, featured: $("#eFeat", m).checked }, "Changes saved");
+      await save(v, { title: $("#eTitle", m).value, date: $("#eDate", m).value, description: $("#eDesc", m).value, featured: $("#eFeat", m).checked }, "Changes saved");
       m.remove();
     };
   }

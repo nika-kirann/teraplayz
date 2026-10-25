@@ -8,12 +8,11 @@
   // Videos come from the backend (/api/videos), uploaded via the /admin panel. Featured first, then newest.
   let videos = [];
   let newestDate = null;
-  let categories = ["All"];
   const THUMB_FALLBACK = "assets/thumb-placeholder.svg";
   const thumbOf = (v) => v.thumbnail || THUMB_FALLBACK;
   const post = (url, body) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}), keepalive: true, credentials: "same-origin" }).catch(() => {});
   let cleanup = []; // functions to run when leaving a page
-  const state = { cat: "All", q: "" };
+  const state = { q: "" };
 
   /* ---------- storage ---------- */
   const store = {
@@ -58,7 +57,7 @@
       </a>
       <div class="card-body">
         <h3><a href="#/watch/${encodeURIComponent(v.id)}">${esc(v.title)}</a></h3>
-        <div class="meta"><span class="tag">${esc(v.category)}</span><span>${fmtDate(v.date)}</span></div>
+        <div class="meta"><span>${fmtDate(v.date)}</span></div>
       </div>
     </article>`;
   }
@@ -67,7 +66,6 @@
     return `<section class="section container" id="videos">
       <div class="section-head"><div><h2>${title}</h2><div class="muted">${sub}</div></div></div>
       <div class="filters">
-        <div class="chips" role="tablist">${categories.map((c) => `<button class="chip ${c === state.cat ? "active" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("")}</div>
         <label class="search"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M10 4a6 6 0 1 0 3.7 10.7l4.8 4.8 1.4-1.4-4.8-4.8A6 6 0 0 0 10 4zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8z"/></svg>
           <input id="search" type="search" placeholder="Search videos…" value="${esc(state.q)}" aria-label="Search videos" /></label>
       </div>
@@ -78,23 +76,20 @@
   function renderGrid() {
     const g = $("#grid"); if (!g) return;
     const q = state.q.trim().toLowerCase();
-    const list = videos.filter((v) => (state.cat === "All" || v.category === state.cat) &&
-      (!q || (v.title + " " + v.description + " " + v.category).toLowerCase().includes(q)));
+    const list = videos.filter((v) => !q || (v.title + " " + (v.description || "")).toLowerCase().includes(q));
     const cards = list.map(cardHTML);
     const mid = C.monetag && C.monetag.enabled && list.length > 4 ? `<div class="grid-ad">${adSlot("betweenGrid").replace("ad-slot container", "ad-slot")}</div>` : "";
     if (mid) cards.splice(4, 0, mid);
     g.innerHTML = list.length ? cards.join("") :
       `<div class="empty fade-in"><img src="assets/mascot-empty.jpg" alt="Mascot searching with a magnifying glass" />
-        <h3>Nothing here… yet!</h3><p class="muted">${videos.length ? `No videos match “${esc(state.q || state.cat)}”. New videos drop every day — try another search.` : "The first videos are on their way — check back soon!"}</p>
+        <h3>Nothing here… yet!</h3><p class="muted">${videos.length ? `No videos match “${esc(state.q)}”. New videos drop every day — try another search.` : "The first videos are on their way — check back soon!"}</p>
         <button class="btn btn-ghost" id="resetFilters">Show all videos</button></div>`;
-    const r = $("#resetFilters"); if (r) r.onclick = () => { state.q = ""; state.cat = "All"; $("#search").value = ""; syncChips(); renderGrid(); };
+    const r = $("#resetFilters"); if (r) r.onclick = () => { state.q = ""; $("#search").value = ""; renderGrid(); };
     runAdScripts(g);
     bindPreviews(g);
   }
-  function syncChips() { document.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c.dataset.cat === state.cat)); }
 
   function bindFilters() {
-    document.querySelectorAll(".chip").forEach((c) => c.addEventListener("click", () => { state.cat = c.dataset.cat; syncChips(); renderGrid(); }));
     const s = $("#search"); let t;
     s.addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => { state.q = s.value; renderGrid(); }, 150); });
     renderGrid();
@@ -199,7 +194,7 @@
           ${adSlot("belowPlayer").replace("ad-slot container", "ad-slot")}
           <div class="watch-info">
             <h1>${esc(v.title)}</h1>
-            <div class="meta"><span class="tag">${esc(v.category)}</span><span>${fmtDate(v.date)}</span><span>· ${esc(v.duration)}</span></div>
+            <div class="meta"><span>${fmtDate(v.date)}</span><span>· ${esc(v.duration)}</span></div>
             <div class="watch-actions" id="actions">
               <div class="quality" role="group" aria-label="Quality"><button class="on" data-q="sd">SD</button><button data-q="hd">HD 👑</button></div>
               <a class="btn btn-gold btn-sm" href="${tgLink()}" target="_blank" rel="noopener">👑 HD &amp; ad-free with Premium</a>
@@ -210,7 +205,7 @@
         </div>
         <aside>
           <div class="upnext"><h3>Up next</h3>
-            ${others.map((o) => `<a class="mini-card" href="#/watch/${encodeURIComponent(o.id)}"><img src="${esc(thumbOf(o))}" alt="" loading="lazy"/><div><b>${esc(o.title)}</b><div class="meta"><span>${esc(o.category)}</span><span>${esc(o.duration)}</span></div></div></a>`).join("")}
+            ${others.map((o) => `<a class="mini-card" href="#/watch/${encodeURIComponent(o.id)}"><img src="${esc(thumbOf(o))}" alt="" loading="lazy"/><div><b>${esc(o.title)}</b><div class="meta"><span>${esc(o.duration)}</span></div></div></a>`).join("")}
           </div>
           <div class="side-premium"><img src="assets/mascot-premium.jpg" alt="" /><b>Go ad-free in HD</b><p class="muted small">Premium: ${C.premiumPriceStars} ⭐ / ${C.premiumPeriod} on Telegram</p><a href="${tgLink()}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">Join Premium on Telegram</a></div>
         </aside>
@@ -317,7 +312,6 @@
       toast("Couldn't load videos — please refresh");
     }
     newestDate = videos.reduce((m, v) => (v.date && (!m || v.date > m) ? v.date : m), null);
-    categories = ["All", ...new Set(videos.map((v) => v.category))];
   }
 
   window.addEventListener("hashchange", route);
