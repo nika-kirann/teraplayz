@@ -7,8 +7,8 @@ window.SITE_CONFIG = {
   tagline: "Fresh videos every day ✨",
 
   // ---- Premium (Telegram Stars) ----
-  telegramPremiumLink: "https://t.me/YOUR_PREMIUM_GROUP", // <-- change to your private group / invite link
-  telegramChannelLink: "https://t.me/YOUR_PUBLIC_CHANNEL", // optional public channel shown in the footer
+  telegramPremiumLink: "https://t.me/+6SRYKVBk-4tiOGJl", // <-- change to your private group / invite link
+  telegramChannelLink: "https://t.me/content_provider_premium", // optional public channel shown in the footer
   premiumPriceStars: 100,
   premiumPeriod: "month",
 
