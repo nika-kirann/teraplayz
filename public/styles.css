@@ -198,3 +198,5 @@ summary{font-weight:700;cursor:pointer}
 @media(min-width:760px){.toast{bottom:30px}}
 .fade-in{animation:fadeUp .45s var(--ease)} @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.badge.feat{left:.6rem;top:.6rem;background:var(--grad);color:#fff;box-shadow:0 4px 14px rgba(124,58,237,.45)}
+.badge.feat ~ .badge.new{top:2.35rem}

@@ -1,24 +1,29 @@
-# Render Blueprint — deploys TeraPlayz as a free Static Site (no build step)
+# Render Blueprint — TeraPlayz (Python web service on the free plan)
+# Render dashboard → New → Blueprint → pick this repo. You'll be asked for the secret values below.
 services:
   - type: web
     name: teraplayz
-    runtime: static
-    buildCommand: ""
-    staticPublishPath: .
-    pullRequestPreviewsEnabled: false
-    headers:
-      - path: /*
-        name: X-Frame-Options
-        value: SAMEORIGIN
-      - path: /*
-        name: X-Content-Type-Options
-        value: nosniff
-      - path: /assets/*
-        name: Cache-Control
-        value: public, max-age=604800
-      - path: /config.js
-        name: Cache-Control
-        value: no-cache
-      - path: /sw.js
-        name: Cache-Control
-        value: no-cache
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    # Keep ONE worker: the metadata DB is cached in memory and saved to Telegram.
+    startCommand: uvicorn server.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: STORAGE
+        value: telegram
+      - key: TG_API_ID
+        sync: false
+      - key: TG_API_HASH
+        sync: false
+      - key: TG_BOT_TOKEN
+        sync: false
+      - key: TG_CHANNEL_ID
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true

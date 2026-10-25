@@ -5,8 +5,13 @@
   const app = document.getElementById("app");
   const $ = (s, el = document) => el.querySelector(s);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const videos = [...C.videos].sort((a, b) => b.date.localeCompare(a.date));
-  const newestDate = videos[0] && videos[0].date;
+  // Videos come from the backend (/api/videos), uploaded via the /admin panel. Featured first, then newest.
+  let videos = [];
+  let newestDate = null;
+  let categories = ["All"];
+  const THUMB_FALLBACK = "assets/thumb-placeholder.svg";
+  const thumbOf = (v) => v.thumbnail || THUMB_FALLBACK;
+  const post = (url, body) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}), keepalive: true, credentials: "same-origin" }).catch(() => {});
   let cleanup = []; // functions to run when leaving a page
   const state = { cat: "All", q: "" };
 
@@ -32,7 +37,6 @@
     clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2200);
   }
   const fmtDate = (d) => new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-  const categories = ["All", ...new Set(videos.map((v) => v.category))];
   const tgLink = () => esc(C.telegramPremiumLink);
   const playIcon = '<svg viewBox="0 0 24 24" width="26" height="26"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>';
 
@@ -44,11 +48,11 @@
   function cardHTML(v) {
     return `<article class="card" data-id="${esc(v.id)}">
       <a href="#/watch/${encodeURIComponent(v.id)}" class="thumb" aria-label="Watch ${esc(v.title)}">
-        <img src="${esc(v.thumbnail)}" alt="" loading="lazy" />
+        <img src="${esc(thumbOf(v))}" alt="" loading="lazy" />
         <video muted playsinline preload="none"></video>
         <span class="play">${playIcon}</span>
+        ${v.featured ? '<span class="badge feat">⭐ Featured</span>' : ""}
         ${v.date === newestDate ? '<span class="badge new">NEW TODAY</span>' : ""}
-        
         <span class="badge dur">${esc(v.duration)}</span>
         <span class="preview-bar"></span>
       </a>
@@ -81,7 +85,7 @@
     if (mid) cards.splice(4, 0, mid);
     g.innerHTML = list.length ? cards.join("") :
       `<div class="empty fade-in"><img src="assets/mascot-empty.jpg" alt="Mascot searching with a magnifying glass" />
-        <h3>Nothing here… yet!</h3><p class="muted">No videos match “${esc(state.q || state.cat)}”. New videos drop every day — try another search.</p>
+        <h3>Nothing here… yet!</h3><p class="muted">${videos.length ? `No videos match “${esc(state.q || state.cat)}”. New videos drop every day — try another search.` : "The first videos are on their way — check back soon!"}</p>
         <button class="btn btn-ghost" id="resetFilters">Show all videos</button></div>`;
     const r = $("#resetFilters"); if (r) r.onclick = () => { state.q = ""; state.cat = "All"; $("#search").value = ""; syncChips(); renderGrid(); };
     runAdScripts(g);
@@ -190,7 +194,7 @@
       <section class="container watch fade-in">
         <div>
           <div class="player" id="player">
-            <video id="vid" controls playsinline preload="metadata" poster="${esc(v.thumbnail)}" src="${esc(v.fullUrl)}"></video>
+            <video id="vid" controls playsinline preload="metadata" poster="${esc(thumbOf(v))}" src="${esc(v.fullUrl)}"></video>
           </div>
           ${adSlot("belowPlayer").replace("ad-slot container", "ad-slot")}
           <div class="watch-info">
@@ -206,7 +210,7 @@
         </div>
         <aside>
           <div class="upnext"><h3>Up next</h3>
-            ${others.map((o) => `<a class="mini-card" href="#/watch/${encodeURIComponent(o.id)}"><img src="${esc(o.thumbnail)}" alt="" loading="lazy"/><div><b>${esc(o.title)}</b><div class="meta"><span>${esc(o.category)}</span><span>${esc(o.duration)}</span></div></div></a>`).join("")}
+            ${others.map((o) => `<a class="mini-card" href="#/watch/${encodeURIComponent(o.id)}"><img src="${esc(thumbOf(o))}" alt="" loading="lazy"/><div><b>${esc(o.title)}</b><div class="meta"><span>${esc(o.category)}</span><span>${esc(o.duration)}</span></div></div></a>`).join("")}
           </div>
           <div class="side-premium"><img src="assets/mascot-premium.jpg" alt="" /><b>Go ad-free in HD</b><p class="muted small">Premium: ${C.premiumPriceStars} ⭐ / ${C.premiumPeriod} on Telegram</p><a href="${tgLink()}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">Join Premium on Telegram</a></div>
         </aside>
@@ -229,6 +233,8 @@
       const url = location.href;
       try { if (navigator.share) await navigator.share({ title: v.title, url }); else { await navigator.clipboard.writeText(url); toast("Link copied!"); } } catch {}
     };
+    let counted = false; // count one view per play session
+    vid.addEventListener("play", () => { if (!counted) { counted = true; post(`/api/videos/${encodeURIComponent(v.id)}/view`); } });
     cleanup.push(() => { vid.pause(); vid.removeAttribute("src"); vid.load(); });
   }
 
@@ -298,7 +304,22 @@
     else if (page === "videos") { viewVideos(); document.title = "All videos · TeraPlayz"; }
     else { viewHome(); document.title = "TeraPlayz — Fresh videos every day"; }
     window.scrollTo({ top: 0, behavior: "instant" });
+    post("/api/track", { path: "/" + h }); // anonymous page-view analytics for the admin dashboard
   }
+
+  async function loadVideos() {
+    try {
+      const r = await fetch("/api/videos", { credentials: "same-origin" });
+      if (!r.ok) throw new Error(r.status);
+      videos = (await r.json()).videos || [];
+    } catch (e) {
+      videos = [];
+      toast("Couldn't load videos — please refresh");
+    }
+    newestDate = videos.reduce((m, v) => (v.date && (!m || v.date > m) ? v.date : m), null);
+    categories = ["All", ...new Set(videos.map((v) => v.category))];
+  }
+
   window.addEventListener("hashchange", route);
-  route();
+  loadVideos().then(route);
 })();
