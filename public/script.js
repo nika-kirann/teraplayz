@@ -84,6 +84,7 @@ async function loadVideos() {
   grid.innerHTML = videos.map(v => `
     <div class="rounded-2xl overflow-hidden cursor-pointer" onclick="playVideo(${v.id}, '${v.title.replace(/'/g, "\\'")}', ${v.is_premium})">
       <div class="aspect-video bg-zinc-900 relative">
+        <img src="/api/videos/${v.id}/thumb" class="w-full h-full object-cover" onerror="this.style.display='none'">
         <div class="absolute inset-0 flex items-center justify-center text-pink-900/40 text-5xl">▶</div>
         ${v.is_premium ? '<span class="premium-badge absolute top-3 right-3">HQ</span>' : ''}
       </div>
@@ -101,8 +102,12 @@ async function playVideo(id, title, isPrem) {
     return;
   }
   const r = await fetch(`/api/videos/${id}/stream`);
-  const d = await r.json();
-  player.src = d.url;
+  if (!r.ok) {
+    alert('Stream failed');
+    return;
+  }
+  const blob = await r.blob();
+  player.src = URL.createObjectURL(blob);
   playerTitle.textContent = title;
   modal.classList.remove('hidden');
   player.play();
