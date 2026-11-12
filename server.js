@@ -37,6 +37,7 @@ async function initDB() {
       title TEXT NOT NULL,
       description TEXT,
       telegram_file_id TEXT NOT NULL,
+      thumbnail_file_id TEXT,
       telegram_message_id BIGINT,
       quality TEXT DEFAULT 'sd',
       is_premium BOOLEAN DEFAULT false,
@@ -73,21 +74,44 @@ app.get('/api/videos', async (req, res) => {
   }
 });
 
-// Get stream URL (refreshes Telegram file link)
+// Get stream URL or proxy (refreshes Telegram file link and proxies to avoid CORS)
 app.get('/api/videos/:id/stream', async (req, res) => {
   try {
     const [video] = await sql`SELECT * FROM videos WHERE id = ${req.params.id}`;
     if (!video) return res.status(404).json({ error: 'not found' });
 
-    // Premium gate example: free users get SD only if marked premium content
-    // Real check would use user session; here simplified
     const file = await bot.getFile(video.telegram_file_id);
-    const url = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
+    const tgUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
 
     await sql`UPDATE videos SET views = views + 1 WHERE id = ${req.params.id}`;
-    res.json({ url, quality: video.quality, is_premium: video.is_premium });
+
+    // Proxy the video so the browser can play it (Telegram file URLs block CORS and expire)
+    const tgRes = await fetch(tgUrl);
+    if (!tgRes.ok) return res.status(502).json({ error: 'telegram fetch failed' });
+
+    res.setHeader('Content-Type', tgRes.headers.get('content-type') || 'video/mp4');
+    res.setHeader('Accept-Ranges', 'bytes');
+    tgRes.body.pipe(res);
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+// Thumbnail endpoint
+app.get('/api/videos/:id/thumb', async (req, res) => {
+  try {
+    const [video] = await sql`SELECT thumbnail_file_id FROM videos WHERE id = ${req.params.id}`;
+    if (!video || !video.thumbnail_file_id) return res.status(404).end();
+
+    const file = await bot.getFile(video.thumbnail_file_id);
+    const tgUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
+    const tgRes = await fetch(tgUrl);
+    if (!tgRes.ok) return res.status(502).end();
+
+    res.setHeader('Content-Type', 'image/jpeg');
+    tgRes.body.pipe(res);
+  } catch (e) {
+    res.status(500).end();
   }
 });
 
@@ -235,9 +259,11 @@ bot.on('video', async (msg) => {
       supports_streaming: true
     });
 
+    const thumb = video.thumbnail?.file_id || null;
+
     await sql`
-      INSERT INTO videos (title, description, telegram_file_id, telegram_message_id, quality, is_premium)
-      VALUES (${title}, ${description}, ${sent.video.file_id}, ${sent.message_id}, 'hd', false)
+      INSERT INTO videos (title, description, telegram_file_id, thumbnail_file_id, telegram_message_id, quality, is_premium)
+      VALUES (${title}, ${description}, ${sent.video.file_id}, ${thumb}, ${sent.message_id}, 'hd', false)
     `;
 
     await bot.sendMessage(msg.chat.id, `Uploaded: ${title}\nFile ID stored.`);
