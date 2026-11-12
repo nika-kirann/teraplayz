@@ -217,6 +217,33 @@ app.post('/api/telegram/webhook', express.json(), (req, res) => {
   res.sendStatus(200);
 });
 
+// Direct Telegram upload path (bypasses Koyeb memory)
+// Admin sends video to the bot; bot forwards to channel and stores file_id
+bot.on('video', async (msg) => {
+  try {
+    if (msg.from.id !== parseInt(process.env.ADMIN_TELEGRAM_ID, 10)) return;
+
+    const video = msg.video;
+    const caption = msg.caption || 'Untitled';
+    const title = caption.split('\n')[0].slice(0, 100);
+    const description = caption;
+
+    const sent = await bot.sendVideo(process.env.TELEGRAM_CHANNEL_ID, video.file_id, {
+      caption,
+      supports_streaming: true
+    });
+
+    await sql`
+      INSERT INTO videos (title, description, telegram_file_id, telegram_message_id, quality, is_premium)
+      VALUES (${title}, ${description}, ${sent.video.file_id}, ${sent.message_id}, 'hd', false)
+    `;
+
+    await bot.sendMessage(msg.chat.id, `Uploaded: ${title}\nFile ID stored.`);
+  } catch (e) {
+    await bot.sendMessage(msg.chat.id, `Upload failed: ${e.message}`);
+  }
+});
+
 // Bot payment handler setup
 async function setupBot() {
   // Handle /start premium or /premium
