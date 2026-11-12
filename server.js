@@ -18,7 +18,12 @@ const PORT = process.env.PORT || 3000;
 const sql = neon(process.env.NEON_DATABASE_URL);
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
 
-const upload = multer({ dest: '/tmp/uploads/' });
+const upload = multer({
+  dest: '/tmp/uploads/',
+  limits: {
+    fileSize: 80 * 1024 * 1024 // 80 MB hard cap to stay under 512 MB free tier
+  }
+});
 
 app.use(cors());
 app.use(express.json());
@@ -87,12 +92,17 @@ app.get('/api/videos/:id/stream', async (req, res) => {
 });
 
 // Admin upload video -> Telegram channel + Neon
+// Streams the file instead of loading it fully into memory
 app.post('/api/admin/upload', adminOnly, upload.single('video'), async (req, res) => {
+  let filePath;
   try {
     if (!req.file) return res.status(400).json({ error: 'no video' });
+    filePath = req.file.path;
     const { title, description, quality = 'sd', is_premium = false } = req.body;
 
-    const sent = await bot.sendVideo(process.env.TELEGRAM_CHANNEL_ID, req.file.path, {
+    // Stream to Telegram (node-telegram-bot-api accepts ReadStream)
+    const stream = fs.createReadStream(filePath);
+    const sent = await bot.sendVideo(process.env.TELEGRAM_CHANNEL_ID, stream, {
       caption: `${title}\n${description || ''}`,
       supports_streaming: true
     });
@@ -105,10 +115,16 @@ app.post('/api/admin/upload', adminOnly, upload.single('video'), async (req, res
       VALUES (${title}, ${description || ''}, ${fileId}, ${messageId}, ${quality}, ${is_premium === 'true'})
     `;
 
-    fs.unlinkSync(req.file.path);
     res.json({ success: true, file_id: fileId });
   } catch (e) {
+    if (e.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: 'file too large (max 80 MB on free tier)' });
+    }
     res.status(500).json({ error: e.message });
+  } finally {
+    if (filePath && fs.existsSync(filePath)) {
+      fs.unlink(filePath, () => {});
+    }
   }
 });
 
