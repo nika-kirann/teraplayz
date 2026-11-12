@@ -59,6 +59,10 @@ async function initDB() {
     )
   `;
   console.log('DB ready');
+
+  // Add missing columns on existing tables
+  await sql`ALTER TABLE videos ADD COLUMN IF NOT EXISTS thumbnail_file_id TEXT`;
+  await sql`ALTER TABLE videos ADD COLUMN IF NOT EXISTS description TEXT`;
 }
 initDB().catch(console.error);
 
@@ -68,6 +72,38 @@ function adminOnly(req, res, next) {
   if (key !== process.env.ADMIN_KEY) return res.status(403).json({ error: 'forbidden' });
   next();
 }
+
+// Admin stats
+app.get('/api/admin/stats', adminOnly, async (req, res) => {
+  try {
+    const [totals] = await sql`SELECT COUNT(*)::int as videos, COALESCE(SUM(views),0)::int as views FROM videos`;
+    const recent = await sql`SELECT id, title, views, created_at FROM videos ORDER BY created_at DESC LIMIT 10`;
+    res.json({ totals, recent });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Admin delete video
+app.delete('/api/admin/videos/:id', adminOnly, async (req, res) => {
+  try {
+    await sql`DELETE FROM videos WHERE id = ${req.params.id}`;
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Admin set thumbnail manually
+app.post('/api/admin/videos/:id/thumb', adminOnly, async (req, res) => {
+  try {
+    const { thumbnail_file_id } = req.body;
+    await sql`UPDATE videos SET thumbnail_file_id = ${thumbnail_file_id} WHERE id = ${req.params.id}`;
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // List videos (public)
 app.get('/api/videos', async (req, res) => {

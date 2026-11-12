@@ -6,46 +6,103 @@
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-zinc-950 text-white p-8">
-  <div class="max-w-md mx-auto">
-    <h1 class="text-2xl mb-6">Admin Upload</h1>
-    <form id="uploadForm" class="space-y-4">
-      <input type="password" id="adminKey" placeholder="Admin Key" class="w-full p-3 bg-zinc-900 rounded border border-zinc-700" required>
-      <input type="text" id="title" placeholder="Title" class="w-full p-3 bg-zinc-900 rounded border border-zinc-700" required>
-      <textarea id="description" placeholder="Description" class="w-full p-3 bg-zinc-900 rounded border border-zinc-700"></textarea>
-      <select id="quality" class="w-full p-3 bg-zinc-900 rounded border border-zinc-700">
+  <div class="max-w-2xl mx-auto space-y-8">
+    <h1 class="text-2xl">Admin</h1>
+
+    <div id="stats" class="bg-zinc-900 rounded-lg p-4 text-sm text-zinc-400">Loading stats...</div>
+
+    <form id="uploadForm" class="space-y-4 bg-zinc-900 p-4 rounded-lg">
+      <h2 class="text-lg">Upload</h2>
+      <input type="password" id="adminKey" placeholder="Admin Key" class="w-full p-3 bg-zinc-800 rounded" required>
+      <input type="text" id="title" placeholder="Title" class="w-full p-3 bg-zinc-800 rounded" required>
+      <textarea id="description" placeholder="Description" class="w-full p-3 bg-zinc-800 rounded"></textarea>
+      <select id="quality" class="w-full p-3 bg-zinc-800 rounded">
         <option value="sd">SD</option>
         <option value="hd">HD</option>
         <option value="4k">4K</option>
       </select>
-      <label class="flex items-center gap-2 text-sm">
-        <input type="checkbox" id="isPremium"> Premium only
-      </label>
+      <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="isPremium"> Premium only</label>
       <input type="file" id="video" accept="video/*" class="w-full text-sm" required>
-      <button type="submit" class="w-full bg-pink-600 hover:bg-pink-700 p-3 rounded font-medium">Upload to Channel</button>
+      <button type="submit" class="w-full bg-pink-600 hover:bg-pink-700 p-3 rounded">Upload to Channel</button>
+      <p id="status" class="text-sm text-zinc-400"></p>
     </form>
-    <p id="status" class="mt-4 text-sm text-zinc-400"></p>
+
+    <div id="list" class="space-y-2"></div>
   </div>
+
   <script>
+    const keyInput = document.getElementById('adminKey');
+    const status = document.getElementById('status');
+    const list = document.getElementById('list');
+    const statsEl = document.getElementById('stats');
+
+    function headers() {
+      return { 'x-admin-key': keyInput.value };
+    }
+
+    async function loadStats() {
+      if (!keyInput.value) return;
+      try {
+        const r = await fetch('/api/admin/stats', { headers: headers() });
+        const d = await r.json();
+        statsEl.textContent = `${d.totals.videos} videos · ${d.totals.views} total views`;
+        list.innerHTML = (d.recent || []).map(v => `
+          <div class="bg-zinc-900 p-3 rounded flex justify-between items-center text-sm">
+            <div>
+              <div class="font-medium">${v.title}</div>
+              <div class="text-zinc-500">${v.views} views · ${new Date(v.created_at).toLocaleDateString()}</div>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="setThumb(${v.id})" class="text-xs bg-zinc-700 px-2 py-1 rounded">Thumb</button>
+              <button onclick="delVideo(${v.id})" class="text-xs bg-red-900 px-2 py-1 rounded">Delete</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        statsEl.textContent = 'Stats failed';
+      }
+    }
+
+    async function delVideo(id) {
+      if (!confirm('Delete?')) return;
+      await fetch(`/api/admin/videos/${id}`, { method: 'DELETE', headers: headers() });
+      loadStats();
+    }
+
+    async function setThumb(id) {
+      const thumb = prompt('Telegram thumbnail file_id:');
+      if (!thumb) return;
+      await fetch(`/api/admin/videos/${id}/thumb`, {
+        method: 'POST',
+        headers: { ...headers(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ thumbnail_file_id: thumb })
+      });
+      alert('Thumbnail set');
+    }
+
     document.getElementById('uploadForm').onsubmit = async (e) => {
       e.preventDefault();
       const fd = new FormData();
-      fd.append('admin_key', document.getElementById('adminKey').value);
+      fd.append('admin_key', keyInput.value);
       fd.append('title', document.getElementById('title').value);
       fd.append('description', document.getElementById('description').value);
       fd.append('quality', document.getElementById('quality').value);
       fd.append('is_premium', document.getElementById('isPremium').checked);
       fd.append('video', document.getElementById('video').files[0]);
 
-      const status = document.getElementById('status');
       status.textContent = 'Uploading...';
       try {
-        const r = await fetch('/api/admin/upload', { method: 'POST', body: fd, headers: { 'x-admin-key': document.getElementById('adminKey').value } });
+        const r = await fetch('/api/admin/upload', { method: 'POST', body: fd, headers: headers() });
         const d = await r.json();
         status.textContent = d.success ? 'Uploaded. File ID: ' + d.file_id : 'Error: ' + (d.error || 'failed');
+        if (d.success) loadStats();
       } catch (err) {
         status.textContent = 'Network error';
       }
     };
+
+    keyInput.oninput = () => loadStats();
+    loadStats();
   </script>
 </body>
 </html>
