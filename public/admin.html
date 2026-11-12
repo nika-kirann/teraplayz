@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>teraplayz admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-zinc-950 text-white p-8">
+  <div class="max-w-md mx-auto">
+    <h1 class="text-2xl mb-6">Admin Upload</h1>
+    <form id="uploadForm" class="space-y-4">
+      <input type="password" id="adminKey" placeholder="Admin Key" class="w-full p-3 bg-zinc-900 rounded border border-zinc-700" required>
+      <input type="text" id="title" placeholder="Title" class="w-full p-3 bg-zinc-900 rounded border border-zinc-700" required>
+      <textarea id="description" placeholder="Description" class="w-full p-3 bg-zinc-900 rounded border border-zinc-700"></textarea>
+      <select id="quality" class="w-full p-3 bg-zinc-900 rounded border border-zinc-700">
+        <option value="sd">SD</option>
+        <option value="hd">HD</option>
+        <option value="4k">4K</option>
+      </select>
+      <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" id="isPremium"> Premium only
+      </label>
+      <input type="file" id="video" accept="video/*" class="w-full text-sm" required>
+      <button type="submit" class="w-full bg-pink-600 hover:bg-pink-700 p-3 rounded font-medium">Upload to Channel</button>
+    </form>
+    <p id="status" class="mt-4 text-sm text-zinc-400"></p>
+  </div>
+  <script>
+    document.getElementById('uploadForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData();
+      fd.append('admin_key', document.getElementById('adminKey').value);
+      fd.append('title', document.getElementById('title').value);
+      fd.append('description', document.getElementById('description').value);
+      fd.append('quality', document.getElementById('quality').value);
+      fd.append('is_premium', document.getElementById('isPremium').checked);
+      fd.append('video', document.getElementById('video').files[0]);
+
+      const status = document.getElementById('status');
+      status.textContent = 'Uploading...';
+      try {
+        const r = await fetch('/api/admin/upload', { method: 'POST', body: fd, headers: { 'x-admin-key': document.getElementById('adminKey').value } });
+        const d = await r.json();
+        status.textContent = d.success ? 'Uploaded. File ID: ' + d.file_id : 'Error: ' + (d.error || 'failed');
+      } catch (err) {
+        status.textContent = 'Network error';
+      }
+    };
+  </script>
+</body>
+</html>
