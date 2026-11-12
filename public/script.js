@@ -45,12 +45,10 @@ function renderLoginState() {
     `;
     checkPremium(user.id);
   } else {
-    // Widget is injected by the script tag; container is for fallback display
     loginContainer.innerHTML = '';
   }
 }
 
-// Called by Telegram widget
 window.telegramLogin = async function(user) {
   try {
     const r = await fetch('/api/auth/telegram', {
@@ -75,7 +73,7 @@ function logout() {
   currentUser = null;
   isPremium = false;
   ads.style.display = '';
-  premiumBtn.textContent = 'Go Premium · 100★';
+  premiumBtn.textContent = 'Unlock · 100★';
   renderLoginState();
   location.reload();
 }
@@ -84,14 +82,14 @@ async function loadVideos() {
   const r = await fetch('/api/videos');
   const videos = await r.json();
   grid.innerHTML = videos.map(v => `
-    <div class="bg-zinc-900 rounded-xl overflow-hidden cursor-pointer border border-zinc-800" onclick="playVideo(${v.id}, '${v.title.replace(/'/g, "\\'")}', ${v.is_premium})">
-      <div class="aspect-video bg-zinc-800 relative">
-        <div class="absolute inset-0 flex items-center justify-center text-zinc-600 text-4xl">▶</div>
-        ${v.is_premium ? '<span class="premium-badge absolute top-2 right-2">HQ</span>' : ''}
+    <div class="rounded-2xl overflow-hidden cursor-pointer" onclick="playVideo(${v.id}, '${v.title.replace(/'/g, "\\'")}', ${v.is_premium})">
+      <div class="aspect-video bg-zinc-900 relative">
+        <div class="absolute inset-0 flex items-center justify-center text-pink-900/40 text-5xl">▶</div>
+        ${v.is_premium ? '<span class="premium-badge absolute top-3 right-3">HQ</span>' : ''}
       </div>
-      <div class="p-3">
-        <h3 class="font-medium text-sm line-clamp-2">${v.title}</h3>
-        <p class="text-xs text-zinc-500 mt-1">${v.views || 0} views · ${v.quality}</p>
+      <div class="p-4">
+        <h3 class="font-medium text-sm line-clamp-2 text-pink-50">${v.title}</h3>
+        <p class="text-xs text-pink-300/50 mt-1">${v.views || 0} views · ${v.quality}</p>
       </div>
     </div>
   `).join('');
@@ -99,7 +97,7 @@ async function loadVideos() {
 
 async function playVideo(id, title, isPrem) {
   if (isPrem && !isPremium) {
-    alert('Premium required for this video. Login with Telegram and subscribe with 100 stars.');
+    alert('Premium required. Login and unlock with 100 stars.');
     return;
   }
   const r = await fetch(`/api/videos/${id}/stream`);
@@ -125,11 +123,12 @@ premiumBtn.onclick = () => {
 };
 
 function addFloaters() {
-  const svgs = [
-    '<svg class="float-girl w-16 h-24 opacity-30" viewBox="0 0 64 96" fill="none"><path d="M32 8c-6 0-10 6-10 12s4 10 10 10 10-4 10-10-4-12-10-12zm-14 28c-8 4-14 14-14 24v20h56V60c0-10-6-20-14-24-4 6-10 8-14 8s-10-2-14-8z" fill="#ec4899"/></svg>',
-    '<svg class="float-girl w-14 h-20 opacity-20" viewBox="0 0 56 80" fill="none"><path d="M28 6c-5 0-8 5-8 10s3 8 8 8 8-3 8-8-3-10-8-10zm-12 24c-7 3-12 12-12 20v16h48V50c0-8-5-17-12-20-3 5-8 7-12 7s-9-2-12-7z" fill="#a855f7"/></svg>'
+  const accents = [
+    '<div class="float-accent w-32 h-32 rounded-full bg-rose-900/20 blur-3xl" style="top:15%;left:8%;animation-delay:0s"></div>',
+    '<div class="float-accent w-40 h-40 rounded-full bg-fuchsia-900/15 blur-3xl" style="top:55%;right:5%;animation-delay:4s"></div>',
+    '<div class="float-accent w-24 h-24 rounded-full bg-pink-800/20 blur-2xl" style="bottom:10%;left:20%;animation-delay:8s"></div>'
   ];
-  document.body.insertAdjacentHTML('beforeend', svgs.join(''));
+  document.body.insertAdjacentHTML('beforeend', accents.join(''));
 }
 
 renderLoginState();

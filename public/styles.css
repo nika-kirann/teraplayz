@@ -1,35 +1,50 @@
-/* teraplayz styles - professional dark + subtle motion */
-body { font-family: system-ui, -apple-system, sans-serif; }
+/* teraplayz - seductive dark luxury */
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+h1, #playerTitle {
+  font-family: 'Playfair Display', serif;
+}
 
 #grid > div {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  background: linear-gradient(145deg, rgba(20,0,10,0.6), rgba(0,0,0,0.8));
+  border: 1px solid rgba(190, 24, 93, 0.25);
 }
 #grid > div:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(236, 72, 153, 0.15);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 60px rgba(190, 24, 93, 0.35);
+  border-color: rgba(236, 72, 153, 0.5);
 }
 
-/* Hot girls animation - subtle floating silhouettes / glow */
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.4; }
-  50% { transform: translateY(-12px) rotate(2deg); opacity: 0.7; }
+/* Soft breathing glow on cards */
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 20px rgba(190, 24, 93, 0.1); }
+  50% { box-shadow: 0 0 40px rgba(190, 24, 93, 0.25); }
 }
-.float-girl {
+#grid > div {
+  animation: breathe 6s ease-in-out infinite;
+}
+
+/* Floating sensual accents */
+@keyframes drift {
+  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.15; }
+  50% { transform: translateY(-20px) rotate(3deg); opacity: 0.3; }
+}
+.float-accent {
   position: fixed;
   pointer-events: none;
   z-index: 0;
-  animation: float 8s ease-in-out infinite;
-  filter: blur(1px);
+  animation: drift 12s ease-in-out infinite;
+  filter: blur(2px);
 }
-.float-girl:nth-child(1) { top: 10%; left: 5%; animation-delay: 0s; }
-.float-girl:nth-child(2) { top: 40%; right: 8%; animation-delay: 2s; }
-.float-girl:nth-child(3) { bottom: 15%; left: 12%; animation-delay: 4s; }
 
-/* Premium badge */
 .premium-badge {
-  background: linear-gradient(90deg, #ec4899, #a855f7);
+  background: linear-gradient(90deg, #be185d, #a21caf);
   font-size: 10px;
-  padding: 2px 6px;
+  padding: 3px 8px;
   border-radius: 999px;
   font-weight: 600;
+  letter-spacing: 0.05em;
 }

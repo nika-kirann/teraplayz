@@ -6,38 +6,44 @@
   <title>teraplayz</title>
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;1,500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 </head>
-<body class="bg-black text-white min-h-screen">
-  <header class="flex items-center justify-between p-4 border-b border-zinc-800">
-    <h1 class="text-2xl font-bold tracking-tight">teraplayz</h1>
+<body class="bg-black text-white min-h-screen overflow-x-hidden">
+  <!-- Seductive background layers -->
+  <div class="fixed inset-0 -z-10">
+    <img src="/assets/portrait1.jpg" class="absolute inset-0 w-full h-full object-cover opacity-20 blur-sm scale-105" alt="">
+    <div class="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-black"></div>
+  </div>
+
+  <header class="flex items-center justify-between p-5 border-b border-pink-900/40 backdrop-blur-sm bg-black/40">
+    <h1 class="text-3xl font-serif italic tracking-tight text-pink-200">teraplayz</h1>
     <div class="flex gap-4 items-center">
       <div id="loginContainer"></div>
-      <button id="premiumBtn" class="bg-gradient-to-r from-pink-500 to-purple-600 px-4 py-2 rounded-full text-sm font-medium hover:opacity-90">Go Premium · 100★</button>
-      <a href="https://t.me/your_channel" target="_blank" class="text-sm text-zinc-400 hover:text-white">Join Channel</a>
+      <button id="premiumBtn" class="bg-gradient-to-r from-rose-600 to-fuchsia-700 px-5 py-2 rounded-full text-sm font-medium hover:from-rose-500 hover:to-fuchsia-600 transition-all shadow-lg shadow-rose-900/40">Unlock · 100★</button>
+      <a href="https://t.me/your_channel" target="_blank" class="text-sm text-pink-300/70 hover:text-pink-200">Join</a>
     </div>
   </header>
 
-  <main class="p-4 max-w-7xl mx-auto">
-    <div id="ads" class="mb-6 bg-zinc-900 border border-zinc-700 rounded-lg p-4 text-center text-zinc-400 text-sm">
-      Ad space · upgrade to remove
+  <main class="p-6 max-w-7xl mx-auto relative">
+    <div id="ads" class="mb-8 bg-black/60 border border-pink-900/30 rounded-2xl p-5 text-center text-pink-200/60 text-sm backdrop-blur-sm">
+      teaser · go premium to remove
     </div>
 
-    <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       <!-- videos injected -->
     </div>
   </main>
 
   <!-- Player modal -->
-  <div id="modal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center z-50">
-    <div class="relative w-full max-w-4xl mx-4">
-      <button id="closeModal" class="absolute -top-10 right-0 text-white text-2xl">&times;</button>
-      <video id="player" controls class="w-full rounded-lg" playsinline></video>
-      <h2 id="playerTitle" class="mt-4 text-xl font-medium"></h2>
+  <div id="modal" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center z-50 backdrop-blur-md">
+    <div class="relative w-full max-w-5xl mx-4">
+      <button id="closeModal" class="absolute -top-12 right-0 text-pink-200 text-3xl hover:text-white">&times;</button>
+      <video id="player" controls class="w-full rounded-2xl shadow-2xl shadow-rose-900/30" playsinline></video>
+      <h2 id="playerTitle" class="mt-5 text-2xl font-serif italic text-pink-100"></h2>
     </div>
   </div>
 
   <script>
-    // Telegram Login Widget callback
     function onTelegramAuth(user) {
       window.telegramLogin(user);
     }
