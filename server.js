@@ -221,7 +221,9 @@ app.post('/api/telegram/webhook', express.json(), (req, res) => {
 // Admin sends video to the bot; bot forwards to channel and stores file_id
 bot.on('video', async (msg) => {
   try {
-    if (msg.from.id !== parseInt(process.env.ADMIN_TELEGRAM_ID, 10)) return;
+    if (msg.from.id !== parseInt(process.env.ADMIN_TELEGRAM_ID, 10)) {
+      return bot.sendMessage(msg.chat.id, 'Only admin can upload.');
+    }
 
     const video = msg.video;
     const caption = msg.caption || 'Untitled';
@@ -242,6 +244,22 @@ bot.on('video', async (msg) => {
   } catch (e) {
     await bot.sendMessage(msg.chat.id, `Upload failed: ${e.message}`);
   }
+});
+
+// Basic command replies so the chat is not silent
+bot.onText(/\/start/, async (msg) => {
+  const isAdmin = msg.from.id === parseInt(process.env.ADMIN_TELEGRAM_ID, 10);
+  const text = isAdmin
+    ? 'teraplayz bot ready.\n\nSend any video with a caption to upload it.\n/premium for Stars invoice.\n/admin for status.'
+    : 'teraplayz.\n\nJoin the channel and use the site.\n/premium to unlock ads-free HQ.';
+  await bot.sendMessage(msg.chat.id, text);
+});
+
+bot.onText(/\/admin/, async (msg) => {
+  if (msg.from.id !== parseInt(process.env.ADMIN_TELEGRAM_ID, 10)) {
+    return bot.sendMessage(msg.chat.id, 'Not admin.');
+  }
+  await bot.sendMessage(msg.chat.id, 'Admin mode. Send a video (any size) with caption to add it to the site.');
 });
 
 // Bot payment handler setup
